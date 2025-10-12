@@ -52,16 +52,19 @@ const generateAndEditImageFlow = ai.defineFlow(
     let generationPrompt: any;
     let config;
 
-    model = 'googleai/imagen-4.0-fast-generate-001';
-
     if (input.imageToEdit) {
-      // Image-to-image
+      // Image-to-image editing
+      model = 'googleai/gemini-2.5-flash-image-preview';
       generationPrompt = [
         {media: {url: input.imageToEdit}},
         {text: input.prompt},
       ];
+      config = {
+        responseModalities: ['IMAGE'],
+      };
     } else {
-      // Text-to-image
+      // Text-to-image generation
+      model = 'googleai/imagen-4.0-fast-generate-001';
       generationPrompt = input.prompt;
     }
 
