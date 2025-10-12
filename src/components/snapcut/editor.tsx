@@ -17,21 +17,26 @@ import {
   removeBackground,
   suggestPromptsAction,
   refineImageAction,
+  generateImageAction,
 } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Dropzone from "./dropzone";
 import { Skeleton } from "../ui/skeleton";
+import { Textarea } from "../ui/textarea";
+import { Input } from "../ui/input";
 
 export default function Editor() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
+  const [generationPrompt, setGenerationPrompt] = useState<string>("");
 
   const [isProcessing, startProcessing] = useTransition();
   const [isSuggesting, startSuggesting] = useTransition();
   const [isRefining, startRefining] = useTransition();
+  const [isGenerating, startGenerating] = useTransition();
 
   const { toast } = useToast();
 
@@ -112,6 +117,35 @@ export default function Editor() {
     });
   };
 
+  const handleGenerateImage = () => {
+    if (!generationPrompt) {
+      toast({
+        variant: "destructive",
+        title: "Missing Prompt",
+        description: "Please enter a prompt for image generation.",
+      });
+      return;
+    }
+    startGenerating(async () => {
+      // Use processed image for editing, otherwise it's a new generation.
+      const imageToEdit = processedImage || undefined;
+      const result = await generateImageAction(generationPrompt, imageToEdit);
+      if (result.success) {
+        // If there was no original image, the generated one becomes the original and processed.
+        if (!originalImage) {
+          setOriginalImage(result.image);
+        }
+        setProcessedImage(result.image);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "AI Generation Failed",
+          description: result.error,
+        });
+      }
+    });
+  };
+
   const handleDownload = () => {
     if (!processedImage) return;
     const link = document.createElement("a");
@@ -131,6 +165,8 @@ export default function Editor() {
   if (!originalImage) {
     return <Dropzone onImageUpload={handleImageUpload} />;
   }
+
+  const anyLoading = isProcessing || isRefining || isSuggesting || isGenerating;
 
   return (
     <div className="w-full max-w-7xl">
@@ -170,13 +206,18 @@ export default function Editor() {
           </CardHeader>
           <CardContent className="flex-grow flex flex-col justify-center items-center gap-4">
             <div className="aspect-square w-full relative rounded-lg overflow-hidden border bg-muted/30">
-              {isProcessing || isRefining ? (
+              {anyLoading ? (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-muted-foreground p-4 text-center">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <p className="font-medium text-lg">
                     {isProcessing
                       ? "Removing background..."
-                      : "Refining with AI..."}
+                      : isRefining
+                      ? "Refining with AI..."
+                      : isGenerating
+                      ? "Generating with AI..."
+                      : "Thinking..."
+                      }
                   </p>
                   <p className="text-sm">This may take a moment.</p>
                 </div>
@@ -201,51 +242,70 @@ export default function Editor() {
                 </div>
               )}
             </div>
-
-            {processedImage && !isProcessing && !isRefining && (
-              <div className="w-full flex flex-col gap-4 items-center">
-                <div className="w-full flex flex-wrap justify-center gap-4">
-                   <Button onClick={handleDownload} className="w-full sm:w-auto flex-grow sm:flex-grow-0">
-                    <Download className="mr-2 h-4 w-4" /> Download
-                  </Button>
-                  <Button variant="outline" onClick={handleSuggestPrompts} disabled={isSuggesting} className="w-full sm:w-auto flex-grow sm:flex-grow-0">
-                    {isSuggesting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="mr-2 h-4 w-4" />
-                    )}
-                    Refine with AI
-                  </Button>
-                </div>
-
-                {isSuggesting && (
-                  <div className="w-full space-y-2 pt-4">
-                     <p className="text-sm font-medium text-center text-muted-foreground">Getting AI suggestions...</p>
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                )}
-                
-                {suggestedPrompts.length > 0 && !isRefining &&(
-                   <div className="w-full space-y-3 pt-4 animate-in fade-in duration-500">
-                    <p className="text-sm font-medium text-center text-muted-foreground">Choose a refinement style:</p>
-                    {suggestedPrompts.map((prompt, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        className="w-full justify-start text-left h-auto py-3 group"
-                        onClick={() => handleRefineImage(prompt)}
-                        disabled={isRefining}
-                      >
-                        <Sparkles className="mr-3 h-4 w-4 text-accent transition-transform group-hover:scale-125" />
-                        <span className="flex-1">{prompt}</span>
-                      </Button>
-                    ))}
-                  </div>
-                )}
+            
+            <div className="w-full flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  placeholder="Enter a prompt to generate or edit an image..."
+                  value={generationPrompt}
+                  onChange={(e) => setGenerationPrompt(e.target.value)}
+                  disabled={anyLoading}
+                />
+                <Button onClick={handleGenerateImage} disabled={anyLoading} className="w-full sm:w-auto">
+                  {isGenerating ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Generate
+                </Button>
               </div>
-            )}
+
+              {processedImage && !anyLoading && (
+                <div className="w-full flex flex-col gap-4 items-center">
+                  <div className="w-full flex flex-wrap justify-center gap-4">
+                    <Button onClick={handleDownload} className="w-full sm:w-auto flex-grow sm:flex-grow-0">
+                      <Download className="mr-2 h-4 w-4" /> Download
+                    </Button>
+                    <Button variant="outline" onClick={handleSuggestPrompts} disabled={isSuggesting} className="w-full sm:w-auto flex-grow sm:flex-grow-0">
+                      {isSuggesting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wand2 className="mr-2 h-4 w-4" />
+                      )}
+                      Refine Extraction
+                    </Button>
+                  </div>
+
+                  {isSuggesting && (
+                    <div className="w-full space-y-2 pt-4">
+                      <p className="text-sm font-medium text-center text-muted-foreground">Getting AI suggestions...</p>
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
+                  )}
+                  
+                  {suggestedPrompts.length > 0 && !isRefining &&(
+                    <div className="w-full space-y-3 pt-4 animate-in fade-in duration-500">
+                      <p className="text-sm font-medium text-center text-muted-foreground">Choose a refinement style:</p>
+                      {suggestedPrompts.map((prompt, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="w-full justify-start text-left h-auto py-3 group"
+                          onClick={() => handleRefineImage(prompt)}
+                          disabled={isRefining}
+                        >
+                          <Sparkles className="mr-3 h-4 w-4 text-accent transition-transform group-hover:scale-125" />
+                          <span className="flex-1">{prompt}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

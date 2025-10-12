@@ -2,6 +2,7 @@
 "use server";
 
 import { enhanceExtraction } from "@/ai/flows/enhance-extraction-with-llm";
+import { generateAndEditImage } from "@/ai/flows/generate-and-edit-image";
 import { suggestRefinementPrompts } from "@/ai/flows/suggest-refinement-prompts";
 
 export async function removeBackground(
@@ -92,6 +93,25 @@ export async function refineImageAction(
     return {
       success: false,
       error: "Failed to refine image with AI. Please try again.",
+    };
+  }
+}
+
+export async function generateImageAction(
+  prompt: string,
+  imageToEdit?: string
+): Promise<{ success: true; image: string } | { success: false; error: string }> {
+  try {
+    const result = await generateAndEditImage({
+      prompt,
+      imageToEdit,
+    });
+    return { success: true, image: result.generatedImage };
+  } catch (error: any) {
+    console.error("Error generating image:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to generate image with AI. Please try again.",
     };
   }
 }
