@@ -1,3 +1,4 @@
+
 "use server";
 
 import { enhanceExtraction } from "@/ai/flows/enhance-extraction-with-llm";
@@ -15,29 +16,30 @@ export async function removeBackground(
     };
   }
 
-  // The fileToBase64 function returns a data URI: data:[<mediatype>];base64,<data>
-  // We need to extract just the base64 data part.
-  const base64Data = image.split(",")[1];
-
   try {
-    const response = await fetch("https://api.remove.bg/v1/removebg", {
+    const blob = await fetch(image).then(res => res.blob());
+    const formData = new FormData();
+    formData.append('image_file', blob);
+    formData.append('size', 'auto');
+
+    const response = await fetch("https://api.remove.bg/v1.0/removebg", {
       method: "POST",
       headers: {
         "X-Api-Key": apiKey,
-        "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        image_file_b64: base64Data,
-        size: "auto", // Automatically determine output size
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
       // Try to parse the error response from remove.bg
-      const errorData = await response.json().catch(() => null);
-      const errorMessage =
-        errorData?.errors?.[0]?.title || `Request failed with status ${response.status}`;
-      console.error("Error removing background:", errorMessage);
+      let errorMessage = `Request failed with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData?.errors?.[0]?.title || errorMessage;
+      } catch (e) {
+        // Ignore if response is not JSON
+      }
+      console.error("Error removing background:", await response.text());
       return { success: false, error: errorMessage };
     }
 
