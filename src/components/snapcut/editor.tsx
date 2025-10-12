@@ -10,9 +10,12 @@ import {
   Sparkles,
   Wand2,
   X,
+  User,
+  ShoppingBag,
+  Car,
 } from "lucide-react";
 
-import { fileToBase64 } from "@/lib/utils";
+import { fileToBase64, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   removeBackground,
@@ -28,6 +31,14 @@ import { Skeleton } from "../ui/skeleton";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { RemoveBgType } from "@/app/actions";
 
 export default function Editor() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -35,6 +46,7 @@ export default function Editor() {
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
   const [generationPrompt, setGenerationPrompt] = useState<string>("");
   const [addShadow, setAddShadow] = useState(false);
+  const [subjectType, setSubjectType] = useState<RemoveBgType>("auto");
 
   const [isProcessing, startProcessing] = useTransition();
   const [isSuggesting, startSuggesting] = useTransition();
@@ -71,7 +83,10 @@ export default function Editor() {
     if (!originalImage) return;
 
     startProcessing(async () => {
-      const result = await removeBackground(originalImage, addShadow);
+      const result = await removeBackground(originalImage, {
+        addShadow,
+        type: subjectType,
+      });
       if (result.success) {
         setProcessedImage(result.image);
       } else {
@@ -164,6 +179,7 @@ export default function Editor() {
     setProcessedImage(null);
     setSuggestedPrompts([]);
     setAddShadow(false);
+    setSubjectType("auto");
   };
 
   if (!originalImage) {
@@ -171,6 +187,7 @@ export default function Editor() {
   }
 
   const anyLoading = isProcessing || isRefining || isSuggesting || isGenerating;
+  const isRemoveBgDisabled = isProcessing || !!processedImage;
 
   return (
     <div className="w-full max-w-7xl">
@@ -210,7 +227,7 @@ export default function Editor() {
           </CardHeader>
           <CardContent className="flex-grow flex flex-col justify-center items-center gap-4">
             <div className="aspect-square w-full relative rounded-lg overflow-hidden border bg-muted/30">
-              {anyLoading ? (
+              {anyLoading && !isSuggesting ? (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-muted-foreground p-4 text-center">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   <p className="font-medium text-lg">
@@ -234,15 +251,43 @@ export default function Editor() {
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center p-4 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch id="shadow-switch" checked={addShadow} onCheckedChange={setAddShadow} disabled={isProcessing}/>
-                    <Label htmlFor="shadow-switch">Add Subtle Shadow</Label>
-                  </div>
+                <div className="w-full h-full flex flex-col items-center justify-center p-4 gap-6">
+                   <div className="w-full max-w-sm space-y-4">
+                     <div className="grid w-full items-center gap-1.5">
+                        <Label htmlFor="subject-type">Subject Type</Label>
+                         <Select
+                          value={subjectType}
+                          onValueChange={(v) => setSubjectType(v as RemoveBgType)}
+                          disabled={isRemoveBgDisabled}
+                        >
+                          <SelectTrigger id="subject-type">
+                            <SelectValue placeholder="Auto-detect" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="auto">
+                              <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" /> Auto-detect</div>
+                            </SelectItem>
+                            <SelectItem value="person">
+                               <div className="flex items-center gap-2"><User /> Person</div>
+                            </SelectItem>
+                            <SelectItem value="product">
+                               <div className="flex items-center gap-2"><ShoppingBag /> Product</div>
+                            </SelectItem>
+                             <SelectItem value="car">
+                                <div className="flex items-center gap-2"><Car /> Car</div>
+                             </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch id="shadow-switch" checked={addShadow} onCheckedChange={setAddShadow} disabled={isRemoveBgDisabled}/>
+                        <Label htmlFor="shadow-switch">Add Subtle Shadow</Label>
+                      </div>
+                   </div>
                   <Button
                     size="lg"
                     onClick={handleRemoveBackground}
-                    disabled={isProcessing}
+                    disabled={isRemoveBgDisabled}
                   >
                     <Wand2 className="mr-2 h-5 w-5" />
                     Remove Background
