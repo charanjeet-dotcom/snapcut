@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating and editing images using a text prompt.
@@ -49,6 +50,7 @@ const generateAndEditImageFlow = ai.defineFlow(
   async input => {
     let model;
     let generationPrompt: any;
+    let config;
 
     if (input.imageToEdit) {
       // Image-to-image
@@ -57,6 +59,7 @@ const generateAndEditImageFlow = ai.defineFlow(
         {media: {url: input.imageToEdit}},
         {text: input.prompt},
       ];
+      config = { responseModalities: ['IMAGE'] };
     } else {
       // Text-to-image
       model = 'googleai/imagen-4.0-fast-generate-001';
@@ -66,9 +69,7 @@ const generateAndEditImageFlow = ai.defineFlow(
     const {media} = await ai.generate({
       model,
       prompt: generationPrompt,
-      config: input.imageToEdit
-        ? {responseModalities: ['IMAGE']}
-        : undefined,
+      config,
     });
 
     const imageUrl = media.url;
