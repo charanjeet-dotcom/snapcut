@@ -6,7 +6,8 @@ import { generateAndEditImage } from "@/ai/flows/generate-and-edit-image";
 import { suggestRefinementPrompts } from "@/ai/flows/suggest-refinement-prompts";
 
 export async function removeBackground(
-  image: string
+  image: string,
+  addShadow?: boolean
 ): Promise<{ success: true; image: string } | { success: false; error: string }> {
   const apiKey = process.env.REMOVE_BG_API_KEY;
   if (!apiKey) {
@@ -22,6 +23,9 @@ export async function removeBackground(
     const formData = new FormData();
     formData.append('image_file', blob);
     formData.append('size', 'auto');
+    if (addShadow) {
+      formData.append('add_shadow', 'true');
+    }
 
     const response = await fetch("https://api.remove.bg/v1.0/removebg", {
       method: "POST",

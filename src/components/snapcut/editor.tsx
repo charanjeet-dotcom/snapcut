@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useTransition } from "react";
@@ -24,14 +25,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Dropzone from "./dropzone";
 import { Skeleton } from "../ui/skeleton";
-import { Textarea } from "../ui/textarea";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Switch } from "../ui/switch";
 
 export default function Editor() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
   const [generationPrompt, setGenerationPrompt] = useState<string>("");
+  const [addShadow, setAddShadow] = useState(false);
 
   const [isProcessing, startProcessing] = useTransition();
   const [isSuggesting, startSuggesting] = useTransition();
@@ -68,7 +71,7 @@ export default function Editor() {
     if (!originalImage) return;
 
     startProcessing(async () => {
-      const result = await removeBackground(originalImage);
+      const result = await removeBackground(originalImage, addShadow);
       if (result.success) {
         setProcessedImage(result.image);
       } else {
@@ -160,6 +163,7 @@ export default function Editor() {
     setOriginalImage(null);
     setProcessedImage(null);
     setSuggestedPrompts([]);
+    setAddShadow(false);
   };
 
   if (!originalImage) {
@@ -230,7 +234,11 @@ export default function Editor() {
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center p-4">
+                <div className="w-full h-full flex flex-col items-center justify-center p-4 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch id="shadow-switch" checked={addShadow} onCheckedChange={setAddShadow} disabled={isProcessing}/>
+                    <Label htmlFor="shadow-switch">Add Subtle Shadow</Label>
+                  </div>
                   <Button
                     size="lg"
                     onClick={handleRemoveBackground}
