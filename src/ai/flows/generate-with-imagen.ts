@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating images using Imagen 3.
@@ -42,7 +43,7 @@ const generateWithImagenFlow = ai.defineFlow(
   },
   async input => {
     const {media} = await ai.generate({
-      model: 'googleai/imagen-3.0-generate-002',
+      model: 'googleai/imagen-4.0-fast-generate-001',
       prompt: input.prompt,
     });
 
