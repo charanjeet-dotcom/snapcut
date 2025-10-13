@@ -13,6 +13,7 @@ import {
   User,
   ShoppingBag,
   Car,
+  Bot,
 } from "lucide-react";
 
 import { fileToBase64, cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import {
   suggestPromptsAction,
   refineImageAction,
   generateImageAction,
+  generateImagenAction,
 } from "@/app/actions";
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +54,7 @@ export default function Editor() {
   const [isSuggesting, startSuggesting] = useTransition();
   const [isRefining, startRefining] = useTransition();
   const [isGenerating, startGenerating] = useTransition();
+  const [isGeneratingImagen, startGeneratingImagen] = useTransition();
 
   const { toast } = useToast();
 
@@ -164,6 +167,32 @@ export default function Editor() {
     });
   };
 
+  const handleGenerateImagen = () => {
+    if (!generationPrompt) {
+      toast({
+        variant: "destructive",
+        title: "Missing Prompt",
+        description: "Please enter a prompt to generate an image with Imagen.",
+      });
+      return;
+    }
+    startGeneratingImagen(async () => {
+      const result = await generateImagenAction(generationPrompt);
+      if (result.success) {
+        if (!originalImage) {
+          setOriginalImage(result.image);
+        }
+        setProcessedImage(result.image);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Imagen Generation Failed",
+          description: result.error,
+        });
+      }
+    });
+  };
+
   const handleDownload = () => {
     if (!processedImage) return;
     const link = document.createElement("a");
@@ -186,7 +215,7 @@ export default function Editor() {
     return <Dropzone onImageUpload={handleImageUpload} />;
   }
 
-  const anyLoading = isProcessing || isRefining || isSuggesting || isGenerating;
+  const anyLoading = isProcessing || isRefining || isSuggesting || isGenerating || isGeneratingImagen;
   const isRemoveBgDisabled = isProcessing || !!processedImage;
 
   return (
@@ -237,6 +266,8 @@ export default function Editor() {
                       ? "Refining with AI..."
                       : isGenerating
                       ? "Generating with AI..."
+                      : isGeneratingImagen
+                      ? "Generating with Imagen..."
                       : "Thinking..."
                       }
                   </p>
@@ -311,6 +342,14 @@ export default function Editor() {
                     <Sparkles className="mr-2 h-4 w-4" />
                   )}
                   Generate
+                </Button>
+                <Button onClick={handleGenerateImagen} disabled={anyLoading} className="w-full sm:w-auto" variant="secondary">
+                  {isGeneratingImagen ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bot className="mr-2 h-4 w-4" />
+                  )}
+                  Imagen
                 </Button>
               </div>
 

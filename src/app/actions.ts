@@ -4,6 +4,7 @@
 import { enhanceExtraction } from "@/ai/flows/enhance-extraction-with-llm";
 import { generateAndEditImage } from "@/ai/flows/generate-and-edit-image";
 import { suggestRefinementPrompts } from "@/ai/flows/suggest-refinement-prompts";
+import { generateWithImagen } from "@/ai/flows/generate-with-imagen";
 
 export type RemoveBgType = "auto" | "person" | "product" | "car";
 
@@ -127,6 +128,23 @@ export async function generateImageAction(
     return {
       success: false,
       error: error.message || "Failed to generate image with AI. Please try again.",
+    };
+  }
+}
+
+export async function generateImagenAction(
+  prompt: string
+): Promise<{ success: true; image: string } | { success: false; error: string }> {
+  try {
+    const result = await generateWithImagen({
+      prompt,
+    });
+    return { success: true, image: result.generatedImage };
+  } catch (error: any) {
+    console.error("Error generating image with Imagen:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to generate image with Imagen. Please try again.",
     };
   }
 }
