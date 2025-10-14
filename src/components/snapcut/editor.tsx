@@ -328,31 +328,6 @@ export default function Editor() {
             </div>
             
             <div className="w-full flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  placeholder="Enter a prompt to generate or edit an image..."
-                  value={generationPrompt}
-                  onChange={(e) => setGenerationPrompt(e.target.value)}
-                  disabled={anyLoading}
-                />
-                <Button onClick={handleGenerateImage} disabled={anyLoading} className="w-full sm:w-auto">
-                  {isGenerating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Generate
-                </Button>
-                <Button onClick={handleGenerateImagen} disabled={anyLoading} className="w-full sm:w-auto" variant="secondary">
-                  {isGeneratingImagen ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Bot className="mr-2 h-4 w-4" />
-                  )}
-                  Imagen
-                </Button>
-              </div>
-
               {processedImage && !anyLoading && (
                 <div className="w-full flex flex-col gap-4 items-center">
                   <div className="w-full flex flex-wrap justify-center gap-4">
